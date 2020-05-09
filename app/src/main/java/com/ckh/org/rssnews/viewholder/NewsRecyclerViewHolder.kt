@@ -20,10 +20,12 @@ class NewsRecyclerViewHolder(itemView: View): RecyclerView.ViewHolder(itemView),
             NewsTag1TV.text = item.tag1
             NewsTag2TV.text = item.tag2
             NewsTag3TV.text = item.tag3
-            this.setOnClickListener{
+
+            Glide.with(this).load(item.img).override(100,100).into(NewsThumbNailIV)
+
+            setOnClickListener{
                 itemClickListener.onClick(item.link)
             }
-            Glide.with(this).load(item.img).override(100,100).into(NewsThumbNailIV)
         }
     }
 }

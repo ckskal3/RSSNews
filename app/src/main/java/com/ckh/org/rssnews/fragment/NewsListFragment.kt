@@ -77,14 +77,33 @@ class NewsListFragment : Fragment(), CoroutineScope {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        job = Job()
 
+        initJobAndAdapterAndViews()
+        setListenerInViews()
+
+        getLoadDate(0)
+
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        job.cancel()
+    }
+
+    private fun initJobAndAdapterAndViews() {
+        initJob()
+        initAdapter()
+        initNewsRecyclerView()
+    }
+    private fun initJob(){
+        job = Job()
+    }
+
+    private fun initAdapter(){
         recyclerAdapter = NewsRecyclerAdapter()
-        recyclerAdapter.setItemClickListener(object : NewsItemClickListener {
-            override fun onClick(link: String) {
-                showNewsOnWebView(link)
-            }
-        })
+    }
+
+    private fun initNewsRecyclerView() {
         with(NewsRecyclerView) {
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
             addItemDecoration(
@@ -95,23 +114,41 @@ class NewsListFragment : Fragment(), CoroutineScope {
             )
             adapter = recyclerAdapter
         }
+    }
+
+    private fun setListenerInViews() {
+        recyclerAdapter.setItemClickListener(object : NewsItemClickListener {
+            override fun onClick(link: String) {
+                showNewsOnWebView(link)
+            }
+        })
 
         SwipeRefreshNewsLayout.setOnRefreshListener {
             if (!isLoading) {
-                items.clear()
-                activity?.window?.setFlags(
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                )
-                getLoadDate(1)
+                clearNewsAndReloadNews()
             } else {
-                SwipeRefreshNewsLayout.isRefreshing = false
+                setIsRefreshingFalse()
             }
-            //getItemLoad()
         }
+    }
+    private fun setIsRefreshingFalse(){
+        SwipeRefreshNewsLayout.isRefreshing = false
+    }
 
-        getLoadDate(0)
+    private fun clearNewsAndReloadNews(){
+        newsClear()
+        setWindowNotTouchableInLoading()
+        getLoadDate(1)
+    }
 
+    private fun newsClear(){
+        items.clear()
+    }
+    private fun setWindowNotTouchableInLoading(){
+        activity?.window?.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        )
     }
 
     private fun getLoadDate(type: Int) {
@@ -195,10 +232,6 @@ class NewsListFragment : Fragment(), CoroutineScope {
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        job.cancel()
-    }
 
     private fun showNewsOnWebView(link: String) {
         val builder = CustomTabsIntent.Builder()
