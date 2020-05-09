@@ -35,7 +35,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.collections.HashMap
 import kotlin.coroutines.CoroutineContext
 
-class NewsListFragment:Fragment(), CoroutineScope{
+class NewsListFragment : Fragment(), CoroutineScope {
     private val st = "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko"
     private var isLoading = true
     private lateinit var job: Job
@@ -44,14 +44,14 @@ class NewsListFragment:Fragment(), CoroutineScope{
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + job
 
-    companion object{
-        fun getInstance(bundle : Bundle): Fragment{
+    companion object {
+        fun getInstance(bundle: Bundle): Fragment {
             val fragment = NewsListFragment()
             fragment.arguments = bundle
             return fragment
         }
 
-        class TagItem:Comparable<TagItem>{
+        class TagItem : Comparable<TagItem> {
             var str: String = ""
             var cnt: Int = 0
             override fun compareTo(other: TagItem): Int {
@@ -72,7 +72,7 @@ class NewsListFragment:Fragment(), CoroutineScope{
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return LayoutInflater.from(context).inflate(R.layout.news_list_fragment, container,false)
+        return LayoutInflater.from(context).inflate(R.layout.news_list_fragment, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -81,28 +81,30 @@ class NewsListFragment:Fragment(), CoroutineScope{
 
         recyclerAdapter = NewsRecyclerAdapter()
         recyclerAdapter.setItemClickListener(object : NewsItemClickListener {
-            override fun onClick(link:String) {
-//                val mainActivity = activity as MainActivity
+            override fun onClick(link: String) {
                 showNewsOnWebView(link)
-//                mainActivity.changeFragment(link)
             }
         })
-        with(NewsRecyclerView){
+        with(NewsRecyclerView) {
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
             addItemDecoration(
-                DividerItemDecoration(context,
-                    DividerItemDecoration.VERTICAL)
+                DividerItemDecoration(
+                    context,
+                    DividerItemDecoration.VERTICAL
+                )
             )
             adapter = recyclerAdapter
         }
 
-        SwipeRefreshNewsLayout.setOnRefreshListener{
-            if(!isLoading){
+        SwipeRefreshNewsLayout.setOnRefreshListener {
+            if (!isLoading) {
                 items.clear()
-                activity?.window?.setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                activity?.window?.setFlags(
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                )
                 getLoadDate(1)
-            }else{
+            } else {
                 SwipeRefreshNewsLayout.isRefreshing = false
             }
             //getItemLoad()
@@ -111,10 +113,11 @@ class NewsListFragment:Fragment(), CoroutineScope{
         getLoadDate(0)
 
     }
-    private fun getLoadDate(type:Int){
+
+    private fun getLoadDate(type: Int) {
         launch {
             isLoading = true
-            lateinit var doc:org.w3c.dom.Document
+            lateinit var doc: org.w3c.dom.Document
             withContext(Dispatchers.IO) {
                 val url = URL(st)
                 val dbf = DocumentBuilderFactory.newInstance()
@@ -124,63 +127,64 @@ class NewsListFragment:Fragment(), CoroutineScope{
                 doc.documentElement.normalize()
             }
             val nodeList = doc.getElementsByTagName("item")
-            for(i in 0 until nodeList.length){
+            for (i in 0 until nodeList.length) {
                 val node = nodeList.item(i)
                 val element = node as Element
-                val title = element.getElementsByTagName("title").item(0).childNodes.item(0).nodeValue
+                val title =
+                    element.getElementsByTagName("title").item(0).childNodes.item(0).nodeValue
                 val link = element.getElementsByTagName("link").item(0).childNodes.item(0).nodeValue
 //                Log.d("rt-link",link)
-                lateinit var temp:Document
+                lateinit var temp: Document
                 try {
                     withContext(Dispatchers.IO) {
-                            temp = Jsoup.connect(link).get()
+                        temp = Jsoup.connect(link).get()
                     }
-                }catch (e : IOException) {
+                } catch (e: IOException) {
                     continue
                 }
-                    val img = temp.select("meta[property=og:image]")
-                    var imgRes = "https://via.placeholder.com/300.jpg"
-                    if (img.size > 0) {
-                        img.get(0).attr("content").let {
-                            imgRes = it
-                        }
+                val img = temp.select("meta[property=og:image]")
+                var imgRes = "https://via.placeholder.com/300.jpg"
+                if (img.size > 0) {
+                    img.get(0).attr("content").let {
+                        imgRes = it
                     }
-                    val des = temp.select("meta[property=og:description]")
-                    var desRes = ""
-                    var tag1 = ""
-                    var tag2 = ""
-                    var tag3 = ""
-                    if (des.size > 0) {
-                        if(des.get(0).attr("content").isNotEmpty()) {
-                            des.get(0).attr("content").let {
-                                desRes = it.trim()
-                                if (desRes.length > 0) {
+                }
+                val des = temp.select("meta[property=og:description]")
+                var desRes = ""
+                var tag1 = ""
+                var tag2 = ""
+                var tag3 = ""
+                if (des.size > 0) {
+                    if (des.get(0).attr("content").isNotEmpty()) {
+                        des.get(0).attr("content").let {
+                            desRes = it.trim()
+                            if (desRes.length > 0) {
 //                            Log.d("rt-des",desRes)
-                                    getTagInDes(desRes).let {
-                                        tag1 = it[0]
-                                        tag2 = it[1]
-                                        tag3 = it[2]
-                                    }
+                                getTagInDes(desRes).let {
+                                    tag1 = it[0]
+                                    tag2 = it[1]
+                                    tag3 = it[2]
                                 }
                             }
-                        }else{
-                            continue
                         }
                     } else {
                         continue
                     }
+                } else {
+                    continue
+                }
 
-                    when (type) {
-                        0 -> {
-                            recyclerAdapter.addItem(Data(title, desRes, link, imgRes, tag1, tag2, tag3))
-                            recyclerAdapter.notifyDataSetChanged()
-                        }
-                        1 -> {
-                            items.add(Data(title, desRes, link, imgRes, tag1, tag2, tag3))
-                        }
+                when (type) {
+                    0 -> {
+                        recyclerAdapter.addItem(Data(title, desRes, link, imgRes, tag1, tag2, tag3))
+                        recyclerAdapter.notifyDataSetChanged()
                     }
+                    1 -> {
+                        items.add(Data(title, desRes, link, imgRes, tag1, tag2, tag3))
+                    }
+                }
             }
-            if(type == 1)  {
+            if (type == 1) {
                 recyclerAdapter.addAllItem(items)
                 activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                 SwipeRefreshNewsLayout.isRefreshing = false
@@ -196,7 +200,7 @@ class NewsListFragment:Fragment(), CoroutineScope{
         job.cancel()
     }
 
-    private fun showNewsOnWebView( link:String){
+    private fun showNewsOnWebView(link: String) {
         val builder = CustomTabsIntent.Builder()
             .setToolbarColor(ContextCompat.getColor(context!!, R.color.colorPrimary))
 
@@ -204,26 +208,26 @@ class NewsListFragment:Fragment(), CoroutineScope{
         intent.launchUrl(context!!, Uri.parse(link))
     }
 
-    private fun getTagInDes(str:String): Array<String> {
+    private fun getTagInDes(str: String): Array<String> {
         val map = HashMap<String, Int>()
         val regex = Regex("[^A-Za-z0-9가-힣]+")
-        val str_t = str.replace(regex," ")
+        val str_t = str.replace(regex, " ")
 //        Log.d("rt-des",str_t)
         val st = StringTokenizer(str_t)
 
-        while (st.hasMoreTokens()){
+        while (st.hasMoreTokens()) {
             val tag = st.nextToken()
-            if(tag.length >= 2){
-                if(map.containsKey(tag)){
-                    map[tag] = map[tag]!!+1
-                }else{
+            if (tag.length >= 2) {
+                if (map.containsKey(tag)) {
+                    map[tag] = map[tag]!! + 1
+                } else {
                     map[tag] = 1
                 }
             }
         }
         val tags = Array(map.size) { TagItem() }
         var idx = 0
-        for (key:String in map.keys){
+        for (key: String in map.keys) {
             tags[idx].str = key
             tags[idx].cnt = map.get(key)!!
 
